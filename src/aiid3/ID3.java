@@ -51,144 +51,103 @@ class ID3 {
     private String[][] data;	// Training data indexed by example, attribute
     private String[][] strings; // Unique strings for each attribute
     private int[] stringCount;  // Number of unique strings for each attribute
-    private String[] classes;
 
-    //getEntropy - gets the entropy of current state, loops through all the states and gets their entropy.
-    //input is training data
-    //training data is a table - last of each is the class
-    //entropy of this state is the entropy of the class
-    /*
-    split(node, dataset){
-    get best attribute A
-    for each value of a create new child node
-    split training data into child nodes
-    for each node/subset
-        if pure: stop
-        else: split(childNode, subset)
-    
-    the dataset is the training set of data that we have
-    
-    find best first attribute
-    create a tree node
-    the children are an array of tree , which means for each time we split the data to child nodes we should add
-    the value is its position in the strings array  
-     */
     public void split(TreeNode n, String[][] set, String[][] stringSet) {
         //in case of impure set
         if (stringSet.length == 0) {
-            String[] cValues = strings[strings.length - 1];
-            int[] classCount = new int[cValues.length];
-            for (int j = 0; j < cValues.length; j++) { //classes
-                for (int i = 0; i < set.length; i++) { //set
-                    if (set[i][set[i].length - 1].equals(cValues[j])) {
-                        classCount[j]++;
-                    }
-                }
-            }
-            int bestClass = 0;
-            int bestCount = 0;
-            for (int i = 0; i < classCount.length; i++) {
-                if (classCount[i] > bestCount) {
-                    bestClass = i;
-                    bestCount = classCount[i];
-                }
-            }
-            System.out.println("unpure final class");
-            n.value = bestClass;
+            n.value = getBestImpure(set, stringSet);
             return;
-        }
+        } else if (set.length != 0) {
 
-        if (set.length == 0) {
-            return;
-        }
-
-        //gets the best attribute for this set to split on
-        int A = getBestAttribute(set, stringSet);
-        int index = getAttributeIndex(set[0][A]);
-        if (DEBUG) {
-            System.out.println("<--------- " + set[0][A]);
-        }
-        if (n == null) {
-            decisionTree = new TreeNode(null, index);
-            n = decisionTree;
-        }
-
-        n.value = index;
-
-        int childCount = 0;
-        if (stringSet[A] == null) {
-            return;
-        }
-        for (int i = 0; i < stringSet[A].length; i++) {
-            if (stringSet[A][i] != null) {
-                childCount++;
-            }
-        }
-        //createse A.n child nodes
-        n.children = new TreeNode[childCount];
-
-        //loop through each attribute
-        for (int i = 0; i < childCount; i++) {
+            //gets the best attribute for this set to split on
+            int A = getBestAttribute(set, stringSet);
+            int index = getAttributeIndex(set[0][A]);
             if (DEBUG) {
-                System.out.println("Looping through child nodes");
+                System.out.println("<--------- " + set[0][A]);
             }
-            n.children[i] = new TreeNode(null, index);
+            if (n == null) {
+                decisionTree = new TreeNode(null, index);
+                n = decisionTree;
+            }
 
-            ArrayList<String[]> newSet = new ArrayList<>();
-            HashSet hs = new HashSet();
+            n.value = index;
 
-            //gets the index of children in this subset
-            newSet.add(set[0]);
-            for (int j = 1; j < set.length; j++) { //for each example
-                if (set[j][A].equals(stringSet[A][i])) { //check which strings it belongs to
-                    hs.add(set[j][set[0].length - 1]); //add the class of this example
-                    newSet.add(set[j]);
+            int childCount = 0;
+            if (stringSet[A] == null) {
+                return;
+            }
+            for (int i = 0; i < stringSet[A].length; i++) {
+                if (stringSet[A][i] != null) {
+                    childCount++;
                 }
             }
+            //createse A.n child nodes
+            n.children = new TreeNode[childCount];
 
-            //check subset is pure, set the child node to the class.
-            if (hs.size() == 1) {
-                int classNum = 0;
-                for (int j = 0; j < strings[strings.length - 1].length; j++) {
-                    if (hs.contains(strings[strings.length - 1][j])) {
-                        classNum = j;
-                        break;
+            //loop through each attribute
+            for (int i = 0; i < childCount; i++) {
+                if (DEBUG) {
+                    System.out.println("Looping through child nodes");
+                }
+                n.children[i] = new TreeNode(null, index);
+
+                ArrayList<String[]> newSet = new ArrayList<>();
+                HashSet hs = new HashSet();
+
+                //gets the index of children in this subset
+                newSet.add(set[0]);
+                for (int j = 1; j < set.length; j++) { //for each example
+                    if (set[j][A].equals(stringSet[A][i])) { //check which strings it belongs to
+                        hs.add(set[j][set[0].length - 1]); //add the class of this example
+                        newSet.add(set[j]);
                     }
                 }
-                if (DEBUG) {
-                    System.out.println("pure set - " + strings[A][i] + " - " + set[0][A]);
-                }
-                n.children[i] = new TreeNode(null, classNum);
-            } //if subset is not pure, split again
-            else {
-                //create subset excluding this 
-                String[][] subSet = new String[newSet.size()][];
-                for (int j = 0; j < subSet.length; j++) { //for each example we want to remove the A'th attribute
-                    String[] thisSet = newSet.get(j);
-                    String[] tempSet = new String[thisSet.length - 1];
-                    int tCount = 0;
-                    for (int k = 0; k < stringSet.length; k++) {
-                        if (k != A) {
-                            tempSet[tCount] = thisSet[k];
-                            tCount++;
+
+                //check subset is pure, set the child node to the class.
+                if (hs.size() == 1) {
+                    int classNum = 0;
+                    for (int j = 0; j < strings[strings.length - 1].length; j++) {
+                        if (hs.contains(strings[strings.length - 1][j])) {
+                            classNum = j;
+                            break;
                         }
                     }
-                    subSet[j] = tempSet;
-                }
-
-                String[][] stringSubSet = new String[stringSet.length - 1][];
-                int count = 0;
-                for (int j = 0; j < stringSet.length; j++) {
-                    if (j != A) {
-                        stringSubSet[count] = stringSet[j];
-                        count++;
+                    if (DEBUG) {
+                        System.out.println("pure set - " + strings[A][i] + " - " + set[0][A]);
                     }
-                }
+                    n.children[i] = new TreeNode(null, classNum);
+                } //if subset is not pure, split again
+                else {
+                    //create subset excluding this 
+                    String[][] subSet = new String[newSet.size()][];
+                    for (int j = 0; j < subSet.length; j++) { //for each example we want to remove the A'th attribute
+                        String[] thisSet = newSet.get(j);
+                        String[] tempSet = new String[thisSet.length - 1];
+                        int tCount = 0;
+                        for (int k = 0; k < stringSet.length; k++) {
+                            if (k != A) {
+                                tempSet[tCount] = thisSet[k];
+                                tCount++;
+                            }
+                        }
+                        subSet[j] = tempSet;
+                    }
 
-                if (DEBUG) {
-                    System.out.println("splitting at - " + stringSet[A][i] + ", number of examples - " + subSet.length + " string set length - " + stringSubSet.length);
+                    //creates new subset of strings not containing the attribute we split at
+                    String[][] stringSubSet = new String[stringSet.length - 1][];
+                    int count = 0;
+                    for (int j = 0; j < stringSet.length; j++) {
+                        if (j != A) {
+                            stringSubSet[count] = stringSet[j];
+                            count++;
+                        }
+                    }
+
+                    if (DEBUG) {
+                        System.out.println("splitting at - " + stringSet[A][i] + ", number of examples - " + subSet.length + " string set length - " + stringSubSet.length);
+                    }
+                    split(n.children[i], subSet, stringSubSet);
                 }
-                split(n.children[i], subSet, stringSubSet);
             }
         }
     }
@@ -321,31 +280,31 @@ class ID3 {
         }
     }
 
-    public void train(String[][] trainingData) {
-        indexStrings(trainingData);
-        split(null, trainingData, strings);
-    }
-
-    //gets passed an array of class values
-    public double getEntropy(String[] exampleSet) {
-        double H = 0;
-        String[] classValues = strings[attributes - 1]; //different classes
-        int[] counts = new int[classValues.length]; //count this set has of each
-        for (int i = 0; i < exampleSet.length; i++) { //for each example
-            for (int j = 0; j < classValues.length; j++) {
-                if (exampleSet[i].equals(classValues[j])) { //if class of example is equal to this class, e.g yes/no
-                    counts[j]++;
+    public int getBestImpure(String[][] set, String[][] stringSet) {
+        String[] cValues = strings[strings.length - 1];
+        int[] classCount = new int[cValues.length];
+        for (int j = 0; j < cValues.length; j++) { //classes
+            for (int i = 0; i < set.length; i++) { //set
+                if (set[i][set[i].length - 1].equals(cValues[j])) {
+                    classCount[j]++;
                 }
             }
         }
-
-        double size = exampleSet.length - 1;
-        for (int i = 0; i < counts.length; i++) {
-            double xlog = xlogx(counts[i] / size);
-            H = H - xlog;
+        int bestClass = 0;
+        int bestCount = 0;
+        for (int i = 0; i < classCount.length; i++) {
+            if (classCount[i] > bestCount) {
+                bestClass = i;
+                bestCount = classCount[i];
+            }
         }
+        System.out.println("unpure final class");
+        return bestClass;
+    }
 
-        return H;
+    public void train(String[][] trainingData) {
+        indexStrings(trainingData);
+        split(null, trainingData, strings);
     }
 
     public ID3() {
@@ -384,10 +343,21 @@ class ID3 {
      *
      */
     public void classify(String[][] testData) {
-        if (decisionTree == null) {
-            error("Please run training phase before classification");
+        for (int example = 1; example < testData.length; example++) {
+            TreeNode temp = new TreeNode(null, 0);
+            temp = decisionTree;
+            while (temp.children != null) {
+                int match = 0;
+                for (int att = 0; att < temp.children.length; att++) {
+                    if (testData[example][temp.value].equals(strings[temp.value][att])) {
+                        match = att;
+                        break;
+                    }
+                }
+                temp = temp.children[match];
+            }
+            System.out.println(strings[strings.length - 1][temp.value]);
         }
-        // PUT  YOUR CODE HERE FOR CLASSIFICATION
     } // classify()
 
     /**
@@ -465,18 +435,24 @@ class ID3 {
     } // parseCSV()
 
     public static void main(String[] args) throws FileNotFoundException, IOException {
-//		if (args.length != 2)
-//			error("Expected 2 arguments: file names of training and test data");
-        //	String[][] trainingData = parseCSV(args[0]);
-        //String[][] testData = parseCSV(args[1]);
-        
-        String[][] trainingData = parseCSV("./src/aiid3/realEstateTrain.csv");
+
+//        String[][] testData = parseCSV("./src/aiid3/realEstateTest.csv");
+//        String[][] trainingData = parseCSV("./src/aiid3/realEstateTrain.csv");
+//        ID3 classifier = new ID3();
+//        classifier.train(trainingData);
+//        classifier.printTree();
+//        classifier.classify(testData);
+
+        if (args.length != 2) {
+            error("Expected 2 arguments: file names of training and test data");
+        }
+        String[][] trainingData = parseCSV(args[0]);
+        String[][] testData = parseCSV(args[1]);
         ID3 classifier = new ID3();
         classifier.train(trainingData);
         classifier.printTree();
+        classifier.classify(testData);
 
-        //  classifier.printTree();
-        //classifier.classify(testData);
     } // main()
 
 } // class ID3
